@@ -41,14 +41,14 @@ def scrape_data_for_paper(paper_title, out):
     browser.find_element(By.ID, "gs_hdr_tsi").send_keys(paper_title)
     browser.find_element(By.ID, "gs_hdr_tsb").click()
     html = browser.page_source
-    try:
+    """try:
         cap=browser.find_element(By.ID, "gs_captcha_ccl").text
         print(cap, " 1", type(cap))
         if cap.find("robot") > 0:
             print("Captcha Found")
             solve_captcha()
     except: 
-        print("No Captcha")
+        print("No Captcha")"""
     soup = BeautifulSoup(html, 'html.parser')
     a_dicts = {}
 
@@ -62,14 +62,14 @@ def scrape_data_for_paper(paper_title, out):
                 a_dict['abb_name'] = link.get_text()
                 print(a_dict)
                 browser.get(a_link)
-                try:
+                """try:
                     cap=browser.find_element(By.ID, "gs_captcha_ccl").text
                     print(cap, " 2")
                     if cap.find("Please show you're not a robot") > 0:
                         print("Captcha Found")
                         solve_captcha()
                 except: 
-                    print("No Captcha")
+                    print("No Captcha")"""
                 temp1 = ''
                 temp2 = BeautifulSoup(browser.page_source, 'html.parser').find('span', id="gsc_bpf_more")
                 attempt = 1
@@ -89,17 +89,26 @@ def scrape_data_for_paper(paper_title, out):
                 for paper in a_soup.find('tbody', id='gsc_a_b').find_all('tr', class_='gsc_a_tr'):
                     paper_dict = {'name': paper.find('td', class_='gsc_a_t').find('a').get_text()}
                     print(paper_dict)
-                    browser.get(base + paper.find('td', class_='gsc_a_t').find('a').get('href'))
-                    try:
+                    proxies = {
+                        'http': os.getenv('HTTP_PROXY')  # or just type proxy here without os.getenv()
+                    }
+                    headers = {
+                        'User-agent':
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36 Edge/18.19582"
+                    }
+                    #browser.get(base + paper.find('td', class_='gsc_a_t').find('a').get('href'))
+                    paper_html = requests.get(base + paper.find('td', class_='gsc_a_t').find('a').get('href'),
+                                              headers=headers, proxies=proxies)
+                    """try:
                         cap=browser.find_element(By.ID, "gs_captcha_ccl").text
                         print(cap, " 3")
                         if cap.find("Please show you're not a robot") > 0:
                             print("Captcha Found")
                             solve_captcha()
                     except: 
-                        print("No Captcha")
-                    paper_html = browser.page_source
-                    paper_soup = BeautifulSoup(paper_html, 'html.parser')
+                        print("No Captcha")"""
+                    #paper_html = browser.page_source
+                    paper_soup = BeautifulSoup(paper_html.text, 'html.parser')
                     table = paper_soup.find('div', id='gsc_oci_table')
                     for row in table.find_all('div', class_='gs_scl'):
                         field = row.find('div', class_='gsc_oci_field').text
@@ -137,7 +146,7 @@ def scrape_data_for_paper(paper_title, out):
     with open(out + r'/data.json', 'w', encoding='utf-8') as feedsjson:
         print("dumping data for ", paper_title)
         json.dump(feeds, feedsjson, indent=4)
-
+    browser.close()
     return a_dicts
 
 path = r"D:\Winter 2020\NBER Analysis/"
@@ -155,8 +164,8 @@ if os.path.exists(out + r'/data.json'):
     with open(out + '/data.json', mode='r', encoding='utf-8') as feedsjson:
         feeds = json.load(feedsjson)
     print(len(feeds))
-    feeds = {paper:feeds[paper] for paper in feeds if len(feeds[paper]) > 0}
-    print(len(feeds))
+    #feeds = {paper:feeds[paper] for paper in feeds if len(feeds[paper]) > 0}
+    #print(len(feeds))
     found_papers = set(feeds.keys())
     papers_not_found = [paper for paper in papers_list if paper not in found_papers ]
 else:
